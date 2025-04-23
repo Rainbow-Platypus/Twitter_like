@@ -1,0 +1,27 @@
+localhost {
+    # Frontend
+    handle /* {
+        reverse_proxy frontend:5173
+    }
+
+    # API Backend
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy php:9000 {
+            transport fastcgi {
+                root /var/www/html/public
+            }
+        }
+    }
+
+    # Gestion des erreurs
+    handle_errors {
+        respond "{error.status_code} {error.status_text}" 
+    }
+
+    # Logs
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+} 

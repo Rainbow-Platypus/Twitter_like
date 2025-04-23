@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  php:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/vendor:/var/www/html/vendor
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql://user:password@postgres:5432/twitter_clone?serverVersion=14&charset=utf8
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
+      JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+      JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+      JWT_PASSPHRASE: 'your_passphrase_here'
+    depends_on:
+      - postgres
+
+  caddy:
+    image: caddy:2.7
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./frontend/dist:/srv/frontend
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - php
+      - frontend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost/api
+    ports:
+      - "5173:5173"
+
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: twitter_clone
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  prometheus_data:
+  grafana_data: 
