@@ -1,65 +1,75 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
-import Home from './pages/Home'
-import Profile from './pages/Profile'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import CreatePost from './pages/CreatePost'
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Layout } from './components/Layout';
+import { PrivateRoute } from './components/PrivateRoute';
+import { useAuthStore } from './store/useAuthStore';
+
+// Lazy loading des composants
+const Home = React.lazy(() => import('./pages/Home'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Register = React.lazy(() => import('./pages/Register'));
+const CreatePost = React.lazy(() => import('./pages/CreatePost'));
+const MediaPage = React.lazy(() => import('./pages/MediaPage'));
+
+// Composant de chargement
+const LoadingFallback = () => (
+    <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+);
 
 const App: React.FC = () => {
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-100">
-        <nav className="bg-white shadow-md">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <Link to="/" className="flex items-center">
-                  <span className="text-xl font-bold text-blue-600">Twitter Clone</span>
-                </Link>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Accueil
-                </Link>
-                <Link
-                  to="/create-post"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Créer un post
-                </Link>
-                <Link
-                  to="/profile"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Profil
-                </Link>
-                <Link
-                  to="/login"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Connexion
-                </Link>
-              </div>
-            </div>
-          </div>
-        </nav>
+    const checkAuth = useAuthStore(state => state.checkAuth);
 
-        <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/profile/:username?" element={<Profile />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/create-post" element={<CreatePost />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
-  )
-}
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
 
-export default App 
+    return (
+        <Router>
+            <Layout>
+                <Suspense fallback={<LoadingFallback />}>
+                    <Routes>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route
+                            path="/"
+                            element={
+                                <PrivateRoute>
+                                    <Home />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/profile/:username?"
+                            element={
+                                <PrivateRoute>
+                                    <Profile />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/create-post"
+                            element={
+                                <PrivateRoute>
+                                    <CreatePost />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/media"
+                            element={
+                                <PrivateRoute>
+                                    <MediaPage />
+                                </PrivateRoute>
+                            }
+                        />
+                    </Routes>
+                </Suspense>
+            </Layout>
+        </Router>
+    );
+};
+
+export default App; 

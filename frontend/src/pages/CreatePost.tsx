@@ -1,12 +1,35 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { postService } from '../services/postService';
+import { usePostStore } from '../store/usePostStore';
 
 const CreatePost: React.FC = () => {
+  const navigate = useNavigate();
+  const addPost = usePostStore(state => state.addPost);
   const [content, setContent] = useState('');
   const [image, setImage] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Logique de création de post à implémenter
+    if (!content.trim()) {
+      setError('Le contenu du post ne peut pas être vide');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const newPost = await postService.createPost(content, image || undefined);
+      addPost(newPost);
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du post');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +50,7 @@ const CreatePost: React.FC = () => {
               placeholder="Quoi de neuf ?"
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -38,6 +62,7 @@ const CreatePost: React.FC = () => {
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageChange}
+                disabled={isSubmitting}
               />
               <svg
                 className="w-6 h-6 text-gray-600"
@@ -62,15 +87,31 @@ const CreatePost: React.FC = () => {
                 alt="Preview"
                 className="max-h-48 rounded-lg"
               />
+              <button
+                type="button"
+                onClick={() => setImage(null)}
+                className="mt-2 text-red-600 text-sm hover:text-red-700"
+              >
+                Supprimer l'image
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-red-600 text-sm">
+              {error}
             </div>
           )}
 
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={isSubmitting}
             >
-              Publier
+              {isSubmitting ? 'Publication en cours...' : 'Publier'}
             </button>
           </div>
         </form>
